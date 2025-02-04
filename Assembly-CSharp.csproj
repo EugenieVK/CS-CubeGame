@@ -64,7 +64,6 @@
     <Compile Include="Assets\Scripts\NetworkAPI.cs" />
     <Compile Include="Assets\Scripts\MoveCubes.cs" />
     <Compile Include="Assets\Scripts\SignalRConnector.cs" />
-    <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\Scripts\WebsocketServerCon.cs" />
   </ItemGroup>
   <ItemGroup>
