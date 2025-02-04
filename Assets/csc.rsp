@@ -1,0 +1,12 @@
+-r:System.Buffers.dll
+-r:System.Memory.dll
+-r:System.Net.Http.dll
+-r:System.Net.Sockets.dll
+-r:System.Numerics.Vectors.dll
+-r:System.Runtime.InteropServices.RuntimeInformation.dll
+-r:System.Security.Cryptography.Algorithms.dll
+-r:System.Security.Cryptography.Encoding.dll
+-r:System.Security.Cryptography.Primitives.dll
+-r:System.Security.Cryptography.X509Certificates.dll
+-r:System.Threading.Tasks.Extensions.dll
+-r:System.ValueTuple.dll
