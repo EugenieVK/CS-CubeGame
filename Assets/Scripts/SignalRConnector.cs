@@ -16,13 +16,17 @@ namespace NetworkAPI
         // Define an Event based on the above Delegate
         public event MsgHandler Msg;
 
+        public int connectionCount {get; set;}
+
         public async Task<string> Init(string url)
         {
+            connectionCount = 0;
             _connection = new HubConnectionBuilder()
                 .WithUrl(url)
                 .WithAutomaticReconnect()
                 .Build();
             StartReceivingMessages();
+            StartUpdatingConnectionCount();
             return await StartConnectionAsync();
         }
 
@@ -43,6 +47,14 @@ namespace NetworkAPI
             {
                 Debug.LogError(ex.Message);
             }
+        }
+
+        public void StartUpdatingConnectionCount()
+        {
+            _connection.On<int>("UpdateConnectionCount", (count) =>
+            {
+                connectionCount = count;
+            });
         }
 
         private async Task<string> StartConnectionAsync()
@@ -74,7 +86,7 @@ namespace NetworkAPI
         }
 
 
-        public async void CloseConnection()
+        public async Task CloseConnection()
         {
             await _connection.StopAsync();
         }

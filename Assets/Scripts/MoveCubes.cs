@@ -47,14 +47,14 @@ public class MoveCubes : MonoBehaviour
     void OnEnable() { }
     async void Start()
     {
-        
-        cubeId = await _connector.Init("http://localhost:80/hub");
 
         countdownText.gameObject.SetActive(false);
-
         localCube = GameObject.Find("CubeA");
+        _rb = localCube.GetComponent<Rigidbody>();
+        targetRotation = _rb.rotation;
 
-        _rb = GetComponent<Rigidbody>();
+        cubeId = await _connector.Init("http://localhost:80/hub");
+        isIt = _connector.connectionCount <= 1;
 
         speed = normalSpeed;
         if (isIt)
@@ -67,7 +67,6 @@ public class MoveCubes : MonoBehaviour
         }
 
         _rb.constraints = _rb.constraints | RigidbodyConstraints.FreezePositionY;
-        targetRotation = _rb.rotation;
 
         SwitchCameras();
     }
@@ -76,7 +75,6 @@ public class MoveCubes : MonoBehaviour
     void Update()
     {
         moveDirection = Vector3.zero;
-
         if (inputEnabled)
         {
             if (Input.anyKey)
@@ -132,7 +130,10 @@ public class MoveCubes : MonoBehaviour
         SwitchCameras();
     }
 
-    void OnDisable() { Debug.Log("OnDisable Called"); }
+    async void OnDisable() {
+        await _connector.CloseConnection();
+        Debug.Log("OnDisable Called"); 
+    }
 
     async void OnCollisionEnter(Collision collision)
     {
@@ -152,25 +153,30 @@ public class MoveCubes : MonoBehaviour
 
     async void FixedUpdate()
     {
-        if (moveDirection != Vector3.zero)
+        if (_rb)
         {
-            _rb.linearVelocity = moveDirection.normalized * speed;
+            if (moveDirection != Vector3.zero)
+            {
+                _rb.linearVelocity = moveDirection.normalized * speed;
 
-            string itString = isIt ? "IT" : "NOT";
-            string msgType = "MOVE";
-            await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
-        } else
-        {
-            _rb.linearVelocity = Vector3.zero;
+                string itString = isIt ? "IT" : "NOT";
+                string msgType = "MOVE";
+                await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
+            }
+            else
+            {
+                _rb.linearVelocity = Vector3.zero;
+            }
+
+            _rb.MoveRotation(Quaternion.Slerp(_rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime));
+
+            if (Quaternion.Angle(_rb.rotation, targetRotation) < 0.1f)
+            {
+                _rb.MoveRotation(targetRotation);
+                isRotating = false;
+            }
         }
-
-        _rb.MoveRotation(Quaternion.Slerp(_rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime));
-
-        if(Quaternion.Angle(_rb.rotation, targetRotation) < 0.1f)
-        {
-            _rb.MoveRotation(targetRotation);
-            isRotating = false;
-        }
+        
     }
 
     void RotateCube(float rotation)
