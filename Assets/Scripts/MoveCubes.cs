@@ -24,8 +24,7 @@ public class MoveCubes : MonoBehaviour
     public Dictionary<string, GameObject> remoteCubes = new();
     public Dictionary<string, Vector3> remoteCubePos = new();   
 
-    //public Messaging messaging = new Messaging();
-    //public WebsocketServerCon server = new WebsocketServerCon();
+    public Messaging messaging = new Messaging();
     private readonly SignalRConnector _connector = new SignalRConnector();
 
     private Rigidbody _rb;
@@ -45,7 +44,7 @@ public class MoveCubes : MonoBehaviour
 
     void Awake() { }
     void OnEnable() { }
-    async void Start()
+    void Start()
     {
 
         countdownText.gameObject.SetActive(false);
@@ -53,8 +52,11 @@ public class MoveCubes : MonoBehaviour
         _rb = localCube.GetComponent<Rigidbody>();
         targetRotation = _rb.rotation;
 
-        cubeId = await _connector.Init("http://localhost:80/hub");
-        isIt = _connector.connectionCount <= 1;
+        //cubeId = await _connector.Init("http://localhost:80/hub");
+        //isIt = _connector.connectionCount <= 1;
+
+        cubeId = "A";
+        messaging.startReceivingMessages();
 
         speed = normalSpeed;
         if (isIt)
@@ -126,16 +128,17 @@ public class MoveCubes : MonoBehaviour
         {
             speed = normalSpeed;
         }
-        _connector.Msg += new SignalRConnector.MsgHandler(HandleMessage);
+        //_connector.Msg += new SignalRConnector.MsgHandler(HandleMessage);
+        messaging.Msg += new Messaging.MsgHandler(HandleMessage);
         SwitchCameras();
     }
 
-    async void OnDisable() {
-        await _connector.CloseConnection();
+    void OnDisable() {
+        //await _connector.CloseConnection();
         Debug.Log("OnDisable Called"); 
     }
 
-    async void OnCollisionEnter(Collision collision)
+    void OnCollisionEnter(Collision collision)
     {
 
         string nameOfCollision = collision.gameObject.name;
@@ -145,13 +148,14 @@ public class MoveCubes : MonoBehaviour
             {
                 string itString = isIt ? "IT" : "NOT";
                 string msgType = "COLLISION";
-                await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:na", msgType, collision.gameObject.name);
+                //await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:na", msgType, collision.gameObject.name);
+                messaging.sendMessage($"{cubeId}:{msgType}:{itString}:na");
                 StopBeingIt();
             }
         }
     }
 
-    async void FixedUpdate()
+    void FixedUpdate()
     {
         if (_rb)
         {
@@ -161,7 +165,8 @@ public class MoveCubes : MonoBehaviour
 
                 string itString = isIt ? "IT" : "NOT";
                 string msgType = "MOVE";
-                await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
+                //await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
+                messaging.sendMessage($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}");
             }
             else
             {
@@ -235,26 +240,31 @@ public class MoveCubes : MonoBehaviour
 
     public void HandleMessage(string msg)
     {
+        Debug.Log(msg);
         string[] msgParts = msg.Split(":");
         string id = msgParts[0];
         string type = msgParts[1];
         string itStatus = msgParts[2];
         string coords = msgParts[3];
 
+        if (id != cubeId)
+        {
 
-        if(type == "MOVE")
-        {
-            if (cubes.Contains(id))
+            if (type == "MOVE")
             {
-                moveRemoteCube(id, itStatus, coords);
+                if (cubes.Contains(id))
+                {
+                    moveRemoteCube(id, itStatus, coords);
+                }
+                else
+                {
+                    AddNewCube(id, itStatus, coords);
+                }
             }
-            else
+            else if (type == "COLLISION")
             {
-                AddNewCube(id, itStatus, coords);
+                MakeIt();
             }
-        } else if(type == "COLLISION")
-        {
-            MakeIt();
         }
         
     }

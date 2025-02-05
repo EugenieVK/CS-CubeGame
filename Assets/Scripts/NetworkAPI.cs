@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System;
 using System.Threading;
+using PimDeWitte.UnityMainThreadDispatcher;
 
 namespace NetworkAPI
 {
@@ -56,45 +57,51 @@ namespace NetworkAPI
 
         public void ReceiveMessages()
         {
-            IPAddress mcastAddress;
-            int mcastPort;
+            IPAddress mcastAddress = IPAddress.Parse("230.0.0.1");
+            int mcastPort = 11000;
             Socket mcastSocket = null;
             MulticastOption mcastOption = null;
-            mcastAddress = IPAddress.Parse("230.0.0.1");
-            mcastPort = 11000;
             try
             {
                 mcastSocket = new Socket(AddressFamily.InterNetwork,
                                          SocketType.Dgram,
                                          ProtocolType.Udp);
                 IPAddress localIP = IPAddress.Any;
-                EndPoint localEP = (EndPoint)new IPEndPoint(localIP, mcastPort);
-                mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+                EndPoint localEP = new IPEndPoint(localIP, mcastPort);
+                mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 mcastSocket.Bind(localEP);
 
                 mcastOption = new MulticastOption(mcastAddress, localIP);
                 mcastSocket.SetSocketOption(SocketOptionLevel.IP,
                                             SocketOptionName.AddMembership,
                                             mcastOption);
-                mcastSocket.MulticastLoopback = false;
+                mcastSocket.MulticastLoopback = true;
+
                 bool done = false;
-                byte[] bytes = new Byte[100];
-                IPEndPoint groupEP = new IPEndPoint(mcastAddress, mcastPort);
-                EndPoint remoteEP = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
+                byte[] bytes = new Byte[1024];
+                EndPoint remoteEP = new IPEndPoint(localIP, 0);
 
                 while (!done)
                 {
-                    mcastSocket.ReceiveFrom(bytes, ref remoteEP);
-                    String message = Encoding.ASCII.GetString(bytes, 0, bytes.Length);
-                    Msg(message);
-                }
+                    int msgSize = mcastSocket.ReceiveFrom(bytes, ref remoteEP);
+                    String message = Encoding.ASCII.GetString(bytes, 0, msgSize);
 
-                mcastSocket.Close();
+                    Debug.Log($"RECIEVED: {message}");
+                    UnityMainThreadDispatcher.Instance().Enqueue(() => Msg?.Invoke(message));
+
+                }
             }
 
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Debug.Log(e.ToString());
+            }
+            finally
+            {
+                if(mcastSocket != null)
+                {
+                    mcastSocket.Close();
+                }
             }
         }
 
