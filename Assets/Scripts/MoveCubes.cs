@@ -10,6 +10,7 @@ using System;
 using NetworkAPI;
 using System.Threading.Tasks;
 using TMPro;
+using Unity.VisualScripting;
 
 public class MoveCubes : MonoBehaviour
 {
@@ -42,6 +43,9 @@ public class MoveCubes : MonoBehaviour
     public float rotationSpeed;
     private Quaternion targetRotation;
     private bool isRotating = false;
+
+    private float serverUpdateInterval = 0.05f;
+    private float updateTimer = 0f;
 
     void Awake() { }
     void OnEnable() { }
@@ -126,11 +130,13 @@ public class MoveCubes : MonoBehaviour
         {
             speed = normalSpeed;
         }
+
         _connector.Msg += new SignalRConnector.MsgHandler(HandleMessage);
         SwitchCameras();
     }
 
     async void OnDisable() {
+        await _connector.SendMessageAsync($"{cubeId}:DISCONNECT:NA:NA", "DISCONNECT", cubeId);
         await _connector.CloseConnection();
         Debug.Log("OnDisable Called"); 
     }
@@ -145,7 +151,7 @@ public class MoveCubes : MonoBehaviour
             {
                 string itString = isIt ? "IT" : "NOT";
                 string msgType = "COLLISION";
-                _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:na", msgType, collision.gameObject.name);
+                _ = _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:na", msgType, collision.gameObject.name);
                 StopBeingIt();
             }
         }
@@ -153,6 +159,7 @@ public class MoveCubes : MonoBehaviour
 
     void FixedUpdate()
     {
+        updateTimer += Time.deltaTime;
         if (_rb)
         {
             if (moveDirection != Vector3.zero)
@@ -161,7 +168,13 @@ public class MoveCubes : MonoBehaviour
 
                 string itString = isIt ? "IT" : "NOT";
                 string msgType = "MOVE";
-                _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
+
+                if (updateTimer >= serverUpdateInterval)
+                {
+                    _ = _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
+                    updateTimer = 0f;
+                }
+                
             }
             else
             {
@@ -255,6 +268,9 @@ public class MoveCubes : MonoBehaviour
         } else if(type == "COLLISION")
         {
             MakeIt();
+        } else if(type == "DISCONNECT")
+        {
+            RemoveCube(id);
         }
         
     }
@@ -273,6 +289,15 @@ public class MoveCubes : MonoBehaviour
         remoteCubePos[id] = pos;
 
         remoteCubes[id] = newCube;
+    }
+
+    public void RemoveCube(string id)
+    {
+        cubes.Remove(id);
+        Destroy(remoteCubes[id]);
+        remoteCubes.Remove(id);
+        remoteCubePos.Remove(id);
+
     }
 
     public void MakeIt()

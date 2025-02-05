@@ -2768,8 +2768,8 @@ MonoBehaviour:
   localCube: {fileID: 1936591125}
   countdownText: {fileID: 1484365081}
   cubes: []
-  normalSpeed: 7
-  itSpeed: 14
+  normalSpeed: 5
+  itSpeed: 10
   rotationSpeed: 25
 --- !u!65 &1936591127
 BoxCollider:

@@ -22,7 +22,10 @@ namespace NetworkAPI
         {
             connectionCount = 0;
             _connection = new HubConnectionBuilder()
-                .WithUrl(url)
+                .WithUrl(url, options =>
+                {
+                    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
+                })
                 .WithAutomaticReconnect()
                 .Build();
             StartReceivingMessages();
@@ -88,7 +91,11 @@ namespace NetworkAPI
 
         public async Task CloseConnection()
         {
-            await _connection.StopAsync();
+            if(_connection != null)
+            {
+                await _connection.StopAsync();
+            }
+            
         }
     }
 }
