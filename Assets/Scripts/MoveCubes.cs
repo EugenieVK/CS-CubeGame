@@ -135,7 +135,7 @@ public class MoveCubes : MonoBehaviour
         Debug.Log("OnDisable Called"); 
     }
 
-    async void OnCollisionEnter(Collision collision)
+    void OnCollisionEnter(Collision collision)
     {
 
         string nameOfCollision = collision.gameObject.name;
@@ -145,13 +145,13 @@ public class MoveCubes : MonoBehaviour
             {
                 string itString = isIt ? "IT" : "NOT";
                 string msgType = "COLLISION";
-                await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:na", msgType, collision.gameObject.name);
+                _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:na", msgType, collision.gameObject.name);
                 StopBeingIt();
             }
         }
     }
 
-    async void FixedUpdate()
+    void FixedUpdate()
     {
         if (_rb)
         {
@@ -161,7 +161,7 @@ public class MoveCubes : MonoBehaviour
 
                 string itString = isIt ? "IT" : "NOT";
                 string msgType = "MOVE";
-                await _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
+                _connector.SendMessageAsync($"{cubeId}:{msgType}:{itString}:x={_rb.position.x},y={_rb.position.y},z={_rb.position.z}", msgType, cubeId);
             }
             else
             {
